@@ -23,6 +23,9 @@ from validator.residue_index import ResidueIndexes
 with open("data/test_data.json", "r") as mock_data_file:
     mock_data = json.load(mock_data_file)
 
+with open("data/test_data_multichain.json", "r") as mock_data_file_multichain:
+    mock_data_multichain = json.load(mock_data_file_multichain)
+
 mock_data_no_pdb_id = {"foo": "bar"}
 
 mock_data_bad_numbering = {"pdb_id": "2aqa",
@@ -39,7 +42,7 @@ def mock_get_residue_numbering_true(self):
     return True
 
 
-def mock_compare_residue_number(self, foo, bar):
+def mock_compare_residue_number(self, foo, bar, asd):
     return False
 
 
@@ -64,16 +67,16 @@ class TestCheckResidueIndices(TestCase):
         self.assertIsNone(bad_cri._set_pdb_id())
 
     def test_check_numbering(self):
-        result = self.cri._check_numbering({}, {})
+        result = self.cri._check_numbering({}, {}, "A")
         self.assertFalse(result)
         self.cri._compare_residue_number = mock_compare_residue_number
-        result = self.cri._check_numbering({}, {"residues": [{"pdb_res_label": 0, "aa_type": "ALA"}]})
+        result = self.cri._check_numbering({}, {"residues": [{"pdb_res_label": 0, "aa_type": "ALA"}]}, "A")
         self.assertFalse(result)
 
     def test_get_residue_numbering(self):
         mock_data = {"chain_label": "A"}
         self.cri.pdb_id = "1CBS"
-        self.cri._check_numbering = lambda x, y : True
+        self.cri._check_numbering = lambda x, y, z : True
         result = self.cri._get_residue_numbering(mock_data)
         self.assertTrue(result)
         self.cri.pdb_id = "2H58"
@@ -81,7 +84,7 @@ class TestCheckResidueIndices(TestCase):
         self.assertFalse(result)
 
     def test_recursive_loop(self):
-        result = self.cri._recursive_loop([{"foo": "bar"}], "foo", None, None)
+        result = self.cri._recursive_loop([{"foo": "bar"}], "foo", None, None, "A")
         self.assertFalse(result)
 
     def test_with_bad_numbering(self):
@@ -91,14 +94,19 @@ class TestCheckResidueIndices(TestCase):
 
     def test_process_residues(self):
         result = self.cri._process_residues(
-            [{"author_residue_number": 1, "residue_name": "ALA", "author_insertion_code": ""}], "1", "ALA")
+            [{"author_residue_number": 1, "residue_name": "ALA", "author_insertion_code": ""}], "1", "ALA", "A")
         self.assertTrue(result)
         result = self.cri._process_residues(
-            [{"author_residue_number": 1, "residue_name": "ALA", "author_insertion_code": "C"}], "1C", "ALA")
+            [{"author_residue_number": 1, "residue_name": "ALA", "author_insertion_code": "C"}], "1C", "ALA", "A")
         self.assertTrue(result)
         result = self.cri._process_residues(
-            [{"author_residue_number": 2, "residue_name": "ALA", "author_insertion_code": ""}], "1", "ALA")
+            [{"author_residue_number": 2, "residue_name": "ALA", "author_insertion_code": ""}], "1", "ALA", "A")
         self.assertFalse(result)
         result = self.cri._process_residues(
-            [{"author_residue_number": 1, "residue_name": "ALA", "author_insertion_code": ""}], "1", "HIS")
+            [{"author_residue_number": 1, "residue_name": "ALA", "author_insertion_code": ""}], "1", "HIS", "A")
         self.assertFalse(result)
+
+    def test_with_multichain(self):
+        self.cri = ResidueIndexes(mock_data_multichain)
+        result = self.cri.check_every_residue()
+        self.assertTrue(result)

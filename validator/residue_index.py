@@ -17,6 +17,7 @@ License.
 
 import json
 import requests
+import logging
 
 
 class ResidueIndexes(object):
@@ -119,16 +120,18 @@ class ResidueIndexes(object):
         :param depositor_aa_type: Residue amino acid code provided by user
         :return: True is residue numbering is valid, False if not
         """
-        flag = None
+        # logging.info("label:%s data_len:%i" % (label, len(data)))
         for item in data:
             sub_data = item[label]
             if label == "chains":
-                flag = self._recursive_loop(sub_data, "residues", depositor_residue_number, depositor_aa_type,
+                chain_matches = self._recursive_loop(sub_data, "residues", depositor_residue_number, depositor_aa_type,
                                             depositor_chain_id)
+                if chain_matches:
+                    return True
             elif label == "residues":
                 return self._process_residues(sub_data, depositor_residue_number, depositor_aa_type, depositor_chain_id)
         if label == "chains":
-            return flag
+            return False
 
     def _process_residues(self, residues, depositor_residue_number, depositor_aa_type, depositor_chain_id):
         """
@@ -140,6 +143,7 @@ class ResidueIndexes(object):
         :return: True is residue numbering is valid, False if not
         """
         for residue in residues:
+            # logging.info('comparing ' + ("%i%s" % (residue["author_residue_number"], residue["author_insertion_code"])) + ' ?= ' + depositor_residue_number)
             if "%i%s" % (
                     residue["author_residue_number"], residue["author_insertion_code"]) == depositor_residue_number:
                 return self._make_comparison(residue["residue_name"], depositor_aa_type, depositor_residue_number,
